@@ -18,6 +18,7 @@ DBI and dplyr wrappers to write to DB, fetch and run data manipulation operation
 
 We define `$.DBIConnection()`, `$<-.DBIConnection()` and
 `!.tbl_lazy()` to be able to :
+
 * write in a data base with
   `con$foo <- my_data_frame` (where `con` is a connection built with
   `DBI::dbConnect()` or this package's db_connect), short for
