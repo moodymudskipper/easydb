@@ -1,0 +1,66 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+# easydb
+
+DBI and dplyr wrappers to write to DB, fetch and run data manipulation operations on server side.
+
+We define `$.DBIConnection()`, `$<-.DBIConnection()` and
+`!.tbl_lazy()` to be able to :
+* write in a data base with
+  `con$foo <- my_data_frame` (where `con` is a connection built with
+  `DBI::dbConnect()` or this package's db_connect), short for
+  `DBI::dbWriteTable(con, "foo", my_data_frame)`
+* build a lazy table with `con$foo`, short for `dplyr::tbl(con, "foo")`,
+  so it can be used to do some server side data manipulation using *dplyr*
+* collect a lazy table into the R session with `!my_lazy_table` (or directly
+  `!con$foo`), equivalent to `dplyr::collect(my_lazy_table)` or
+  `dplyr::collect(dplyr::tbl(con, "foo"))`
+
+## Installation
+
+Install with :
+
+    remotes::install_github("moodymudskipper/easydb")
+
+## connect
+
+We offer a simple wrapper around `DBI::dbConnect` that makes it easy to use 
+specs stored in a list and makes it easier to choose the relevant driver.
+
+```{r}
+library(easydb)
+# Used just as DBI::dbConnect()
+db <- db_connect(RSQLite::SQLite(), path = ":memory:")
+# Using shorthand
+db <- db_connect("sqlite", path = ":memory:")
+# Using a list of specs
+specs <- list(drv = "sqlite", path = ":memory:")
+db <- db_connect(specs)
+```
+
+## Query
+
+To write or fetch :
+
+```{r}
+
+db$foo <- head(cars,2)
+
+db$foo
+
+!db$foo
+
+
+```

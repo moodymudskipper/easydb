@@ -1,0 +1,20 @@
+Package: easydb
+Title: DBI and dplyr wrappers to write to DB, fetch and run data manipulation operations on server side
+Version: 0.0.0.9000
+Authors@R: person("Antoine", "Fabri", email = "antoine.fabri@example.com", role = c("aut", "cre"))
+Description: DBI and dplyr wrappers to write to DB, fetch and run data manipulation operations on server side.
+Depends: R (>= 3.1.0)
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
+Roxygen: list(markdown = TRUE)
+Imports: 
+    DBI
+Suggests: 
+    RMariaDB,
+    RMySQL,
+    odbc,
+    RSQLite,
+    RPostgres,
+    ROracle
