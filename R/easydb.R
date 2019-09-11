@@ -71,13 +71,87 @@ NULL
 
 #' @export
 #' @method $ DBIConnection
-`$.DBIConnection` <- dplyr::tbl
+`$.DBIConnection` <- function(con, x){
+  x <- strsplit(x, ".", fixed = TRUE)[[1]]
+  if(length(x)==1) dplyr::tbl(con,x) else dplyr::tbl(con, dbplyr::in_schema(x[1], x[2]))
+}
+
+#' @export
+#' @method $ DBIConnection
+`[[.DBIConnection` <- `$.DBIConnection`
+
+#' @export
+#' @method $ DBIConnection
+`[.DBIConnection` <- function(con, x)
+  stop("`[` is not supported on connections, try `$` or `[[`")
 
 #' @export
 #' @method $<- DBIConnection
-`$<-.DBIConnection` <- function(con, x, value) {DBI::dbWriteTable(con,x,value); con}
+`$<-.DBIConnection` <- function(con, x, value) {
+  if(endsWith(x, ".")){
+    if(is.null(value)){
+      x <- substr(x,1, nchar(x)-1)
+      # this is PostgreSQL syntax, not sure how it will translate
+      # it doesn't work for SQLite
+      DBI::dbExecute(con, paste0("DROP SCHEMA ", x ,";"))
+      return(con)
+    }
+    # define a schema
+    x <- substr(x,1, nchar(x)-1)
+    DBI::dbExecute(con, paste0("ATTACH '", value, "' AS ", x))
+    return(con)
+  }
+  x <- strsplit(x, ".", fixed = TRUE)[[1]]
+  if(length(x)>1) x <- dbplyr::in_schema(x[1], x[2])
+
+  if(is.null(value)) {
+    dplyr::db_drop_table(con, x)
+  } else if (inherits(value, "tbl_lazy")) {
+    query <- sprintf("CREATE TABLE %s AS %s", x, dbplyr::sql_render(value))
+    DBI::dbExecute(con, query)
+  } else {
+    if(!is.data.frame(value)){
+      stop("`value` should be a data frame")
+    }
+    overwrite <- getOption("easydb.overwrite")
+    table_exists <- dplyr::db_has_table(con, x)
+    #table_exists <- dbplyr:::db_has_table.DBIConnection(con, x)
+    if(overwrite && table_exists) dplyr::db_drop_table(con, x)
+    dplyr::copy_to(con, value, x, temporary = FALSE)
+  }
+  con
+}
+
+#' @export
+#' @method $ DBIConnection
+`[[<-.DBIConnection` <- `$<-.DBIConnection`
+
+#' @export
+#' @method $ DBIConnection
+`[<-.DBIConnection` <- function(con, x)
+  stop("`[<-` is not supported on connections, try `$<-` or `[[<-`")
 
 #' @export
 #' @method ! tbl_lazy
 `!.tbl_lazy` <- dplyr::collect
+
+#' @export
+with.DBIConnection <- function(con, expr){
+  tables  <- dplyr::db_list_tables(con)
+  con <- substitute(con)
+  subst_list <- sapply(tables, function(x) bquote(.(con)[[.(x)]]))
+  expr <- substitute(expr)
+  expr <- do.call(substitute, list(expr, subst_list))
+  eval_sub <- function(x, value) {
+    mc <- match.call()
+    if(is.symbol(substitute(x))){
+      mc[[2]] <- call("[[",con,deparse(substitute(x)))
+    }
+    mc[[1]] <- quote(base::`<-`)
+    eval.parent(mc)
+  }
+  eval(expr, enclos = parent.frame(),list(`<-` = eval_sub))
+}
+
+#with(db, foo2 <- union_all(foo,foo))
 
