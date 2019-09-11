@@ -4,13 +4,14 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, include = FALSE}
+```{r, include=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
+requireNamespace("dbplyr")
 ```
 # easydb
 
@@ -28,6 +29,9 @@ We define `$.DBIConnection()`, `$<-.DBIConnection()` and
 * collect a lazy table into the R session with `!my_lazy_table` (or directly
   `!con$foo`), equivalent to `dplyr::collect(my_lazy_table)` or
   `dplyr::collect(dplyr::tbl(con, "foo"))`
+* We can access tables in a schema by using a `.` separator as we would in
+  an SQL query. In that case `con$my_schema.my_table` is equivalent to
+  `dplyr::tbl(con, dbplyr::in_schema("my_schema", "my_table"))`
 
 ## Installation
 
@@ -37,8 +41,7 @@ Install with :
 
 ## connect
 
-We offer a simple wrapper around `DBI::dbConnect` that makes it easy to use 
-specs stored in a list and makes it easier to choose the relevant driver.
+We offer a simple wrapper around `DBI::dbConnect` that makes it easy to use specs stored in a list and makes it easier to choose the relevant driver.
 
 ```{r}
 library(easydb)
@@ -49,6 +52,9 @@ db <- db_connect("sqlite", path = ":memory:")
 # Using a list of specs
 specs <- list(drv = "sqlite", path = ":memory:")
 db <- db_connect(specs)
+# Or just, for this specific case, just use the defaults and it will create
+# an SQLite database in memory
+db <- db_connect()
 ```
 
 ## Query
@@ -56,12 +62,63 @@ db <- db_connect(specs)
 To write or fetch :
 
 ```{r}
-
 db$foo <- head(cars,2)
-
+db$bar <- head(iris,2)
+dplyr::db_list_tables(db)
 db$foo
 
 !db$foo
-
-
 ```
+
+By default one can't overwrite a table, it would need to be removed first, which
+you can do by calling `db$table_to_delete <- NULL`
+
+```{r, error=TRUE}
+db$foo <- tail(cars,2)
+db$foo <- NULL
+db$foo <- tail(cars,2)
+!db$foo
+```
+
+We can allow overwriting by setting the option `easydb.overwrite` to `TRUE`.
+
+```{r}
+options(easydb.overwrite = TRUE)
+db$bar <- tail(iris,2)
+!db$bar
+```
+
+We can attach or create a schema with the following syntax (here creating a
+schema named `"aux"` in a temporary file) :
+
+```{r}
+db$aux. <- tempfile()
+```
+
+Then we can use a smilar syntax to what's already been showed, by prefixing
+table names with the schema name and a dot.
+
+```{r}
+db$aux.baz <- head(mtcars[1:4], 2)
+!db$aux.baz
+```
+
+## using `with()`
+
+We provide a method `with.DBIConnection()` that can be used to do operators "in"
+the database. Just as `base:::with.default()` looks for the symbol of the expression in its first argument first, `with.DBIConnection()` searches for the tables first in the database using the standard `with()`.
+
+A difference is that one can assign inside of the database directly by using `<-` in the expression.
+
+```{r}
+with(db,{
+   # new table from r data
+  baz <- head(mtcars,2)
+  # create new table from dbms data, all computed on server side
+  qux <- dplyr::union_all(foo,foo) 
+})
+db$baz
+db$qux
+```
+
+
