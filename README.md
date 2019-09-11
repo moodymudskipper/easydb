@@ -104,3 +104,59 @@ db$bar <- tail(iris,2)
 #> 1          6.2         3.4          5.4         2.3 virginica
 #> 2          5.9         3            5.1         1.8 virginica
 ```
+
+We can attach or create a schema with the following syntax (here
+creating a schema named `"aux"` in a temporary file) :
+
+``` r
+db$aux. <- tempfile()
+```
+
+Then we can use a smilar syntax to what’s already been showed, by
+prefixing table names with the schema name and a dot.
+
+``` r
+db$aux.baz <- head(mtcars[1:4], 2)
+!db$aux.baz
+#> # A tibble: 2 x 4
+#>     mpg   cyl  disp    hp
+#>   <dbl> <dbl> <dbl> <dbl>
+#> 1    21     6   160   110
+#> 2    21     6   160   110
+```
+
+## using `with()`
+
+We provide a method `with.DBIConnection()` that can be used to do
+operators “in” the database. Just as `base:::with.default()` looks for
+the symbol of the expression in its first argument first,
+`with.DBIConnection()` searches for the tables first in the database
+using the standard `with()`.
+
+A difference is that one can assign inside of the database directly by
+using `<-` in the expression.
+
+``` r
+with(db,{
+   # new table from r data
+  baz <- head(mtcars,2)
+  # create new table from dbms data, all computed on server side
+  qux <- dplyr::union_all(foo,foo) 
+})
+db$baz
+#> # Source:   table<baz> [?? x 11]
+#> # Database: sqlite 3.22.0 []
+#>     mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#>   <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#> 1    21     6   160   110   3.9  2.62  16.5     0     1     4     4
+#> 2    21     6   160   110   3.9  2.88  17.0     0     1     4     4
+db$qux
+#> # Source:   table<qux> [?? x 2]
+#> # Database: sqlite 3.22.0 []
+#>   speed  dist
+#>   <dbl> <dbl>
+#> 1    24   120
+#> 2    25    85
+#> 3    24   120
+#> 4    25    85
+```

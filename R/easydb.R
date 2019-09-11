@@ -77,11 +77,11 @@ NULL
 }
 
 #' @export
-#' @method $ DBIConnection
+#' @method [[ DBIConnection
 `[[.DBIConnection` <- `$.DBIConnection`
 
 #' @export
-#' @method $ DBIConnection
+#' @method [ DBIConnection
 `[.DBIConnection` <- function(con, x)
   stop("`[` is not supported on connections, try `$` or `[[`")
 
@@ -123,12 +123,12 @@ NULL
 }
 
 #' @export
-#' @method $ DBIConnection
+#' @method [[<- DBIConnection
 `[[<-.DBIConnection` <- `$<-.DBIConnection`
 
 #' @export
-#' @method $ DBIConnection
-`[<-.DBIConnection` <- function(con, x)
+#' @method [<- DBIConnection
+`[<-.DBIConnection` <- function(con, x, value)
   stop("`[<-` is not supported on connections, try `$<-` or `[[<-`")
 
 #' @export
@@ -136,6 +136,7 @@ NULL
 `!.tbl_lazy` <- dplyr::collect
 
 #' @export
+#' @method with DBIConnection
 with.DBIConnection <- function(con, expr){
   tables  <- dplyr::db_list_tables(con)
   con <- substitute(con)
