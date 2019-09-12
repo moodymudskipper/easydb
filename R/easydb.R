@@ -137,7 +137,7 @@ NULL
 
 #' @export
 #' @method with DBIConnection
-with.DBIConnection <- function(con, expr){
+with.DBIConnection <- function(data, expr, ...){
   tables  <- dplyr::db_list_tables(con)
   con <- substitute(con)
   subst_list <- sapply(tables, function(x) bquote(.(con)[[.(x)]]))
@@ -154,5 +154,5 @@ with.DBIConnection <- function(con, expr){
   eval(expr, enclos = parent.frame(),list(`<-` = eval_sub))
 }
 
-#with(db, foo2 <- union_all(foo,foo))
-
+# so CMD check doesn't fail
+db_has_table.DBIConnection <- getFromNamespace("db_has_table.DBIConnection", "dbplyr")
